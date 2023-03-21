@@ -1,10 +1,28 @@
+#!/bin/sh
 
+USAGE="$(cat <<EOF
+$(basename "$0") -i <input_file> [-o <out_dir>]
+    -i: input file path
+    -o: output directory, create if not exist. default to current directory.
 
+EOF
+)"
+while getopts 'hi:o:' opt; do case "$opt" in
+    i)    input_file="$OPTARG" ;;
+    o)    out_dir="$OPTARG" ;;
+    h|*)  echo "$USAGE" >&2; exit 1 ;;
+esac done
+shift $((OPTIND-1))
 
-div=65
-base_name=$(basename ${1})
+: "${div:=65}"
+: "${input_file:?}"
+: "${out_dir:=.}"
 
-ffmpeg -i $1 -frames:v 1500 -y  -filter_complex "
+base_name=$(basename "$input_file")
+mkdir -p "$out_dir"
+echo "Created output directory: $out_dir"
+
+ffmpeg -i "$1" -frames:v 1500 -y  -filter_complex "
 [0:0]crop=128:1344:x=624:y=0,format=yuvj420p,
 geq=
 lum='if(between(X, 0, 64), (p((X+64),Y)*(((X+1))/"$div"))+(p(X,Y)*(("$div"-((X+1)))/"$div")), p(X,Y))':
@@ -63,9 +81,9 @@ interpolation=n,crop=64:1344:x=0:y=0,format=yuvj420p,scale=96:1344[TopcropRightB
 [topLeftDone][TopMiddle]hstack[TopleftMiddle],
 [TopleftMiddle][ToprightBottomDone]hstack[topComplete],
 
-[bottomComplete][topComplete]vstack[complete], [complete]v360=eac:e:interp=cubic[v]" -map "[v]" -map "0:a:0"  -c:v dnxhd -profile:v dnxhr_hq -pix_fmt yuv422p -c:a pcm_s16le -f mov /mnt/storage/raw_gopro/raw_local_encoded/"${base_name}-local.mov"
+[bottomComplete][topComplete]vstack[complete], [complete]v360=eac:e:interp=cubic[v]" -map "[v]" -map "0:a:0"  -c:v dnxhd -profile:v dnxhr_hq -pix_fmt yuv422p -c:a pcm_s16le -f mov "$out_dir"/"${base_name}-local.mov"
 
-exiftool -api LargeFileSupport=1  -overwrite_original -XMP-GSpherical:Spherical="true" -XMP-GSpherical:Stitched="true" -XMP-GSpherical:StitchingSoftware=dummy -XMP-GSpherical:ProjectionType=equirectangular /mnt/storage/raw_gopro/raw_local_encoded/"${base_name}-local.mov"
+exiftool -api LargeFileSupport=1  -overwrite_original -XMP-GSpherical:Spherical="true" -XMP-GSpherical:Stitched="true" -XMP-GSpherical:StitchingSoftware=dummy -XMP-GSpherical:ProjectionType=equirectangular "$out_dir"/"${base_name}-local.mov"
 
 echo "Location of File:"
-echo "/mnt/storage/raw_gopro/raw_local_encoded/${base_name}-local.mov"
+echo "$out_dir/${base_name}-local.mov"
