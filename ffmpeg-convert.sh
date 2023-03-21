@@ -22,7 +22,7 @@ base_name=$(basename "$input_file")
 mkdir -p "$out_dir"
 echo "Created output directory: $out_dir"
 
-ffmpeg -i "$1" -frames:v 1500 -y  -filter_complex "
+ffmpeg -i "$input_file" -frames:v 1500 -y  -filter_complex "
 [0:0]crop=128:1344:x=624:y=0,format=yuvj420p,
 geq=
 lum='if(between(X, 0, 64), (p((X+64),Y)*(((X+1))/"$div"))+(p(X,Y)*(("$div"-((X+1)))/"$div")), p(X,Y))':
