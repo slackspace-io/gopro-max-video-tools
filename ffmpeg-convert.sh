@@ -21,8 +21,10 @@ shift $((OPTIND-1))
 base_name=$(basename "$input_file")
 mkdir -p "$out_dir"
 echo "Created output directory: $out_dir"
+outfile=$out_dir/${base_name}.mp4;
 
-ffmpeg -i "$input_file" -frames:v 1500 -y  -filter_complex "
+#ffmpeg -i "$input_file" -frames:v 1500 -y  -filter_complex "
+ffmpeg -i "$input_file" -y -filter_complex "
 [0:0]crop=128:1344:x=624:y=0,format=yuvj420p,
 geq=
 lum='if(between(X, 0, 64), (p((X+64),Y)*(((X+1))/"$div"))+(p(X,Y)*(("$div"-((X+1)))/"$div")), p(X,Y))':
@@ -81,9 +83,8 @@ interpolation=n,crop=64:1344:x=0:y=0,format=yuvj420p,scale=96:1344[TopcropRightB
 [topLeftDone][TopMiddle]hstack[TopleftMiddle],
 [TopleftMiddle][ToprightBottomDone]hstack[topComplete],
 
-[bottomComplete][topComplete]vstack[complete], [complete]v360=eac:e:interp=cubic[v]" -map "[v]" -map "0:a:0"  -c:v dnxhd -profile:v dnxhr_hq -pix_fmt yuv422p -c:a pcm_s16le -f mov "$out_dir"/"${base_name}-local.mov"
+[bottomComplete][topComplete]vstack[complete], [complete]v360=eac:e:interp=cubic,crop=4032:2388:x=0:y=0[v]" -map "[v]" -map "0:a:0"  -c:v h264 -c:a aac -f mp4 "$outfile"
 
-exiftool -api LargeFileSupport=1  -overwrite_original -XMP-GSpherical:Spherical="true" -XMP-GSpherical:Stitched="true" -XMP-GSpherical:StitchingSoftware=dummy -XMP-GSpherical:ProjectionType=equirectangular "$out_dir"/"${base_name}-local.mov"
+exiftool -api LargeFileSupport=1  -overwrite_original -XMP-GSpherical:Spherical="true" -XMP-GSpherical:Stitched="true" -XMP-GSpherical:StitchingSoftware=dummy -XMP-GSpherical:ProjectionType=equirectangular "$outfile"
 
-echo "Location of File:"
-echo "$out_dir/${base_name}-local.mov"
+echo "Location of File: $outfile"
